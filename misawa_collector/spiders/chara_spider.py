@@ -6,7 +6,7 @@ import scrapy
 
 class CharaSpider(scrapy.Spider):
     name='chara'
-    start_urls=['http://jigokuno.com']
+    start_urls = ['http://jigokuno.com']
 
     def parse(self, response):
         for article in response.css("article"):
@@ -17,6 +17,6 @@ class CharaSpider(scrapy.Spider):
                 'url' : url,
             }
             
-        next_page = response.xpath("//a[@rel='next']").extract_first()
+        next_page = response.xpath("//a[@rel='next']/@href").extract_first()
         if next_page is not None:
             yield response.follow(next_page, callback=self.parse)

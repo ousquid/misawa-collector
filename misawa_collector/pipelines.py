@@ -14,7 +14,7 @@ class MisawaCollectorPipeline(object):
     def process_item(self, item, spider):
         """ item: {'name':str, 'url'}
         """
-        print("pipline kitayo-.")
+
         # create name directory
         img_dir = os.path.join('images', item['name'])
         os.makedirs(img_dir, exist_ok=True)
