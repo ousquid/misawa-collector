@@ -12,6 +12,10 @@ class CharaSpider(scrapy.Spider):
         for article in response.css("article"):
             name = article.css("div.article-category a::text").extract_first() 
             url = article.css("div.article-body-inner a::attr(href)").extract_first()
+            
+            if url is None:
+                url = article.css("div.article-body-inner img::attr(src)").extract_first()
+            
             yield {
                 'name' : name,
                 'url' : url,
