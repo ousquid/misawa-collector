@@ -8,24 +8,28 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.optimizers import RMSprop
+import resnet
 
 
-IMG_HEIGHT = 80
-IMG_WIDTH = 60
-IMG_COLOR = 3
+IMG_HEIGHT = 320
+IMG_WIDTH = 240
+IMG_IS_COLOR = True
+
+if IMG_IS_COLOR == True:
+    IMG_COLOR = 3
+else:
+    IMG_COLOR = 1
     
 def load_misawa():
-    path = "/home/ubuntu/workspace/misawa_collector/crawler/images/"
+    path = "../crawler/images/"
     target_dirs = ["masa(34)", "KAZ(32)", "キング(20)", "ソドム(29)"]
     
     x_train, y_train, x_test, y_test = [], [], [], []
     for ans, d in enumerate(target_dirs):
         target_chara = os.path.join(path, d)
         for i, file in enumerate(os.listdir(target_chara)):
-            if d == "masa(34)" and i%2 == 0:
-                continue
             p = os.path.join(target_chara,file)
-            img = image.load_img(p, target_size=(IMG_HEIGHT, IMG_WIDTH))
+            img = image.load_img(p, target_size=(IMG_HEIGHT, IMG_WIDTH), grayscale=not(IMG_IS_COLOR))
             imgary = image.img_to_array(img)
             if i%9 == 0:
                 x_test.append(imgary)
@@ -64,10 +68,10 @@ def simple_model():
 
 def conv_model():
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3),
+    model.add(Conv2D(32, kernel_size=(11, 11),
                  activation='relu',
                  input_shape=(IMG_HEIGHT, IMG_WIDTH, IMG_COLOR)))
-    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(Conv2D(64, (11, 11), activation='relu'))
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     model.add(Flatten())
@@ -75,22 +79,36 @@ def conv_model():
     model.add(Dropout(0.5))
     model.add(Dense(num_classes, activation='softmax'))
     return model
+    
 
 #model = simple_model()
-model = conv_model()
+#model = conv_model()
+model = resnet.ResnetBuilder.build_resnet_18((IMG_COLOR, IMG_HEIGHT, IMG_WIDTH), 4)
 model.summary()
 
 model.compile(loss='categorical_crossentropy',
               optimizer=RMSprop(),
               metrics=['accuracy'])
+              
+datagen = image.ImageDataGenerator(
+    width_shift_range=0.2,
+    height_shift_range=0.2
+)
+datagen.fit(x_train)
 
-batch_size = 6
-epochs = 3
-history = model.fit(x_train, y_train,
-                    batch_size=batch_size,
-                    epochs=epochs,
-                    verbose=1,
-                    validation_data=(x_test, y_test))
+batch_size = 128
+steps_per_epoch = 30
+epochs = 10
+# history = model.fit(x_train, y_train,
+#                     batch_size=batch_size,
+#                     epochs=epochs,
+#                     verbose=1,
+#                     validation_data=(x_test, y_test))
+history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),
+                              steps_per_epoch=steps_per_epoch, 
+                              epochs=epochs,
+                              verbose=1,
+                              validation_data=(x_test, y_test))
 score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
